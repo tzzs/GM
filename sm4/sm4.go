@@ -38,7 +38,7 @@ var CK = [32]uint32{
 }
 
 // Sbox 输出置换 Output substitution
-func Sbox(value byte) byte {
+func Sbox(value uint8) byte {
 	var x, y int
 	x = (int)(value >> 4 & 0xff)
 	y = (int)(value & 0x0f)
@@ -46,7 +46,7 @@ func Sbox(value byte) byte {
 }
 
 // leftRotate 循环左移 cyclic left shift operation
-func leftRotate(in uint32, r uint32) uint32 {
+func leftRotate(in uint32, r int) uint32 {
 	return in<<r | in>>(32-r)
 }
 
@@ -96,13 +96,14 @@ func round(in uint32, rk uint32) uint32 {
 }
 
 // cryption 加解密函数
-func cryption(in []byte, rk []uint32) (out []byte) {
+func cryption(in []byte, rk []uint32) []byte {
 
 	// check rk number
 
 	// check in
 
 	var x [36]uint32
+	out := make([]byte, 16)
 
 	for i := 0; i < 4; i++ {
 		x[i] = uint32(in[i*4])<<24 | uint32(in[i*4+1])<<16 | uint32(in[i*4+2])<<8 | uint32(in[i*4+3])
@@ -110,6 +111,7 @@ func cryption(in []byte, rk []uint32) (out []byte) {
 
 	for i := 0; i < 32; i++ {
 		x[i+4] = x[i] ^ T(x[i+1]^x[i+2]^x[i+3]^rk[i])
+		//fmt.Printf("rk[%v] %x X[%v] %x\n", i, rk[i], i+4, x[i+4])
 	}
 
 	for i := 0; i < 4; i++ {
@@ -119,7 +121,7 @@ func cryption(in []byte, rk []uint32) (out []byte) {
 		out[i*4+3] = byte(x[35-i]) & 0xff
 	}
 
-	return
+	return out
 }
 
 /**
@@ -128,6 +130,7 @@ byte2unit32 convert 16 bytes to 4 uint32
 @return out: 4 uint32
 */
 func byte2uint32(in []byte) (out []uint32) {
+	out = make([]uint32, 4)
 	for i := 0; i < 4; i++ {
 		out[i] = uint32(in[i*4])<<24 | uint32(in[i*4+1])<<16 | uint32(in[i*4+2])<<8 | uint32(in[i*4+3])
 	}
@@ -140,16 +143,17 @@ keyExpansion 密钥扩展函数
 @return rk: 32 extended keys
 */
 func keyExpansion(in []byte) []uint32 {
-	var mk []uint32 = byte2uint32(in)
-	var k []uint32
+	var mk = byte2uint32(in)
+	keys := make([]uint32, 36)
 	for i := 0; i < 4; i++ {
-		k[i] = mk[i] ^ FK[i]
+		keys[i] = mk[i] ^ FK[i]
 	}
 
 	for i := 0; i < 32; i++ {
-		k[i+4] = k[i] ^ T2(k[i+1]^k[i+2]^k[i+3]^CK[i])
+		keys[i+4] = keys[i] ^ T2(keys[i+1]^keys[i+2]^keys[i+3]^CK[i])
 	}
-	return k
+
+	return keys[4:]
 }
 
 /**
@@ -158,7 +162,7 @@ encryption 加密函数
 
 */
 func encryption(in []byte, rk []byte) []byte {
-	var rks []uint32 = keyExpansion(rk)
+	var rks = keyExpansion(rk)
 	return cryption(in, rks)
 }
 
@@ -166,10 +170,10 @@ func encryption(in []byte, rk []byte) []byte {
 decryption 解密函数
 */
 func decryption(in []byte, rk []byte) []byte {
-	var rks []uint32 = keyExpansion(rk)
-	var derk []uint32
+	var rks = keyExpansion(rk)
+	derk := make([]uint32, 32)
 	for i := 0; i < 32; i++ {
-		derk[32-i] = rks[i]
+		derk[32-i-1] = rks[i]
 	}
 
 	return cryption(in, derk)
