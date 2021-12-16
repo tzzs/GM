@@ -147,7 +147,7 @@ func keyExpansion(in []byte) []uint32 {
 	}
 
 	for i := 0; i < 32; i++ {
-		k[i+4] = k[i] ^ T2(k[i]^k[i+1]^k[i+2]^k[i+3])
+		k[i+4] = k[i] ^ T2(k[i+1]^k[i+2]^k[i+3]^CK[i])
 	}
 	return k
 }
