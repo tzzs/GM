@@ -139,18 +139,17 @@ keyExpansion 密钥扩展函数
 @param in: 128 bits original keys
 @return rk: 32 extended keys
 */
-func keyExpansion(in []byte) (rk []uint32) {
-	var mk []uint32
-	mk = byte2uint32(in)
-
+func keyExpansion(in []byte) []uint32 {
+	var mk []uint32 = byte2uint32(in)
 	var k []uint32
 	for i := 0; i < 4; i++ {
 		k[i] = mk[i] ^ FK[i]
 	}
 
 	for i := 0; i < 32; i++ {
-
+		k[i+4] = k[i] ^ T2(k[i]^k[i+1]^k[i+2]^k[i+3])
 	}
+	return k
 }
 
 /**
@@ -158,13 +157,20 @@ encryption 加密函数
 @param
 
 */
-func encryption(in []byte, rk []byte) (out []byte) {
-	return cryption(in, rk)
+func encryption(in []byte, rk []byte) []byte {
+	var rks []uint32 = keyExpansion(rk)
+	return cryption(in, rks)
 }
 
 /**
 decryption 解密函数
 */
-func decryption() {
+func decryption(in []byte, rk []byte) []byte {
+	var rks []uint32 = keyExpansion(rk)
+	var derk []uint32
+	for i := 0; i < 32; i++ {
+		derk[32-i] = rks[i]
+	}
 
+	return cryption(in, derk)
 }
